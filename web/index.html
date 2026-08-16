@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AuraTune</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar-panel">
+            <div class="sidebar-brand">
+                <div class="logo">♪</div>
+                <div>
+                    <p class="label-small">AuraTune</p>
+                    <h1>Feel it. Hear it. Live it.</h1>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a class="nav-link active" data-panel="dashboard" href="#">Dashboard</a>
+                <a class="nav-link" data-panel="mood-lab" href="#">Mood Lab</a>
+                <a class="nav-link" data-panel="playlist" href="#">Playlist</a>
+                <a class="nav-link" data-panel="favorites" href="#">Favorites</a>
+                <a class="nav-link" data-panel="history" href="#">History</a>
+            </nav>
+
+            <div class="sidebar-section" id="sidebar-interact">
+                <div class="sidebar-subtitle">Quick Actions</div>
+                <div id="sidebar-moodlab" class="sidebar-items">
+                    <div class="sidebar-item">
+                        <div>
+                            <strong>Mood Lab</strong>
+                            <div class="muted">Try presets</div>
+                        </div>
+                        <div class="sidebar-actions">
+                            <button class="sidebar-button" data-mood="Calm">Calm</button>
+                            <button class="sidebar-button" data-mood="Energetic">Energetic</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="sidebar-playlists" class="sidebar-items">
+                    <div class="sidebar-item">
+                        <div>
+                            <strong>Playlists</strong>
+                            <div class="muted" id="sidebar-playlist-count">0 saved</div>
+                        </div>
+                        <div class="sidebar-actions">
+                            <button class="sidebar-button small" data-action="open-playlists">Open</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="sidebar-favs" class="sidebar-items">
+                    <div class="sidebar-item">
+                        <div>
+                            <strong>Favorites</strong>
+                            <div class="muted" id="sidebar-favorites-count">0 saved</div>
+                        </div>
+                        <div class="sidebar-actions">
+                            <button class="sidebar-button small" data-action="open-favs">Open</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="sidebar-history" class="sidebar-items">
+                    <div class="sidebar-item">
+                        <div>
+                            <strong>Recently Viewed</strong>
+                            <div class="muted">Last played tracks</div>
+                        </div>
+                        <div class="sidebar-actions">
+                            <button class="sidebar-button small" data-action="clear-history">Clear</button>
+                        </div>
+                    </div>
+                    <ul id="recentHistory" class="panel-list" aria-live="polite"></ul>
+                </div>
+            </div>
+
+            <div class="spotify-card">
+                <p class="label-small">AURA SYSTEM</p>
+                <h2>Music for every mood, powered by Spotify</h2>
+            </div>
+
+            <div class="profile-card">
+                <div class="profile-avatar">S</div>
+                <div>
+                    <p class="label-small">Sara Sara Saara Kathu</p>
+                    <a href="#">View Profile</a>
+                </div>
+            </div>
+        </aside>
+
+        <main class="dashboard-main">
+            <header class="dashboard-header">
+                <div>
+                    <p class="label-small">Put on your headphones🎧</p>
+                    <h2>Let's improve your mood with the perfect music.</h2>
+                </div>
+                <div class="status-pill status-pill-top">
+                    <span class="status-dot"></span>
+                    Playlist Engine Online
+                </div>
+            </header>
+
+            <div class="panel-section" data-view="dashboard">
+            <section class="dashboard-grid">
+                <div class="mood-card">
+                    <div class="section-title small">
+                        <span class="icon-badge">✧</span>
+                        <div>
+                            <p class="label-small">HOW ARE YOU FEELING?</p>
+                            <h3>Choose your mood</h3>
+                        </div>
+                    </div>
+
+                    <div class="mood-options mood-grid">
+                        <button class="mood-button active" data-mood="Calm">Calm</button>
+                        <button class="mood-button" data-mood="Energetic">Energetic</button>
+                        <button class="mood-button" data-mood="Focused">Focused</button>
+                        <button class="mood-button" data-mood="Melancholy">Melancholy</button>
+                        <button class="mood-button" data-mood="Stressed">Stressed</button>
+                        <button class="mood-button" data-mood="Joyful">Joyful</button>
+                    </div>
+
+                    <button id="generateBtn" class="primary-button">Generate Playlist</button>
+
+                    <div class="feature-callout">
+                        <p class="feature-title">AI Mood Engine</p>
+                        <p class="feature-copy">Personalized. Intelligent. Instant.</p>
+                    </div>
+                </div>
+
+                <div class="right-panel">
+                    <div class="current-mode-header">
+                        <div>
+                            <p class="label-small">CURRENT MODE</p>
+                            <h2 id="currentMood">Focused</h2>
+                        </div>
+                        <span id="moodBadge" class="mood-badge mood-focused">FOCUS</span>
+                    </div>
+
+                    <div class="current-listen-card">
+                        <div class="cover-art"></div>
+                        <div class="listen-copy">
+                            <p class="label-small" id="currentDescription">Curated for peace, relaxation and mindfulness.</p>
+                            <div class="listen-meta">
+                                <span id="trackCount">6 tracks</span>
+                                <span id="playlistDuration">24 min</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="track-table">
+                        <div class="track-row track-table-header">
+                            <div>#</div>
+                            <div>TRACK</div>
+                            <div>BPM</div>
+                            <div>DURATION</div>
+                        </div>
+                        <div class="track-list-wrapper">
+                            <ul id="trackList" class="track-list"></ul>
+                        </div>
+                    </div>
+
+                    <div class="mini-player">
+                        <div class="player-info">
+                            <span class="player-status">Now Playing</span>
+                            <strong id="playerTrack">Deep Production Line</strong>
+                        </div>
+                        <div class="player-controls">
+                            <button class="icon-button">⏮</button>
+                            <button class="icon-button play">⏯</button>
+                            <button class="icon-button">⏭</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="slider-card">
+                    <div class="slider-card-header">
+                        <p class="label-small">Mood Lab</p>
+                        <h3>Tune your energy</h3>
+                    </div>
+
+                    <div class="mood-sliders">
+                        <div class="mood-slider">
+                            <span class="slider-title">Energy</span>
+                            <div class="slider-line">
+                                <span class="slider-text">Low</span>
+                                <div class="slider-track">
+                                    <input id="energyRange" type="range" min="14" max="100" value="58" step="1" />
+                                    <div class="slider-fill" id="energySliderFill"></div>
+                                    <div class="slider-thumb" id="energyThumb"></div>
+                                </div>
+                                <span class="slider-text">High</span>
+                            </div>
+                            <span class="slider-value" id="energyValue">58</span>
+                        </div>
+
+                        <div class="mood-slider">
+                            <span class="slider-title">Valence</span>
+                            <div class="slider-line">
+                                <span class="slider-text">Sad</span>
+                                <div class="slider-track">
+                                    <input id="valenceRange" type="range" min="14" max="100" value="63" step="1" />
+                                    <div class="slider-fill" id="valenceSliderFill"></div>
+                                    <div class="slider-thumb" id="valenceThumb"></div>
+                                </div>
+                                <span class="slider-text">Happy</span>
+                            </div>
+                            <span class="slider-value" id="valenceValue">63</span>
+                        </div>
+                    </div>
+
+                    <div class="feeling-summary">
+                        <p class="feeling-title">You are currently feeling like this:</p>
+                        <p id="feelingStatement" class="feeling-statement">Calm, focused, and in control.</p>
+                    </div>
+                </div>
+            </section>
+            </div>
+
+            <div class="panel-section hidden" data-view="mood-lab">
+                <section class="dashboard-grid">
+                    <div class="mood-card">
+                        <div class="section-title small">
+                            <span class="icon-badge">✧</span>
+                            <div>
+                                <p class="label-small">Mood Lab</p>
+                                <h3>Dial your energy and valence</h3>
+                            </div>
+                        </div>
+                        <p class="panel-copy">Choose a mood, then tune the sliders to shape your playlist vibe. Hit Generate Playlist to refresh the right panel.</p>
+                        <div id="moodLabInfo" class="panel-detail">
+                            <p><strong>Selected mood:</strong> Focused</p>
+                            <p><strong>Energy:</strong> 58 / <strong>Valence:</strong> 63</p>
+                            <p>Use the sliders to make your playlist brighter, calmer, or more driven.</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div class="panel-section hidden" data-view="playlist">
+                <section class="dashboard-grid">
+                    <div class="mood-card">
+                        <div class="section-title small">
+                            <span class="icon-badge">♪</span>
+                            <div>
+                                <p class="label-small">Playlist</p>
+                                <h3>View your latest playlist</h3>
+                            </div>
+                        </div>
+                        <p class="panel-copy">Click Generate Playlist to populate your current playlist. Track titles become clickable Spotify links.</p>
+                        <div id="playlistTabInfo" class="panel-detail">
+                            <p><strong>Latest playlist:</strong> No playlist generated yet.</p>
+                            <p><strong>Tip:</strong> Select a mood and use the sliders to tailor the vibe.</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div class="panel-section hidden" data-view="favorites">
+                <section class="dashboard-grid">
+                    <div class="mood-card">
+                        <div class="section-title small">
+                            <span class="icon-badge">★</span>
+                            <div>
+                                <p class="label-small">Favorites</p>
+                                <h3>Your favorite tracks</h3>
+                            </div>
+                        </div>
+                        <p class="panel-copy">Save your go-to songs and return to your favorite soundtracks anytime.</p>
+                        <ul id="favoritesList" class="panel-list">
+                            <li>Golden Street • The Weekend Signal</li>
+                            <li>Quiet Flow • Everyday Morning</li>
+                            <li>Solar Drive • Neon Engine</li>
+                        </ul>
+                    </div>
+                </section>
+            </div>
+
+            <div class="panel-section hidden" data-view="history">
+                <section class="dashboard-grid">
+                    <div class="mood-card">
+                        <div class="section-title small">
+                            <span class="icon-badge">⏳</span>
+                            <div>
+                                <p class="label-small">History</p>
+                                <h3>Track your listening sessions</h3>
+                            </div>
+                        </div>
+                        <p class="panel-copy">Recent playlists and mood sessions will be listed here.</p>
+                        <div id="historyLastSong" class="panel-detail">
+                            <p><strong>Last directed song:</strong> None yet</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
