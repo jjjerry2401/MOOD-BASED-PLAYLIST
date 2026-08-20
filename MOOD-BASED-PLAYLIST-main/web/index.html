@@ -127,8 +127,10 @@
                     <button id="generateBtn" class="primary-button">Generate Playlist</button>
 
                     <div class="feature-callout">
-                        <p class="feature-title">AI Mood Engine</p>
-                        <p class="feature-copy">Personalized. Intelligent. Instant.</p>
+                        <p class="feature-title">Top artists in this mood</p>
+                        <ol id="topArtistsList" class="top-artists-list">
+                            <li>Generate a playlist to discover artists</li>
+                        </ol>
                     </div>
                 </div>
 
@@ -161,6 +163,9 @@
                         </div>
                         <div class="track-list-wrapper">
                             <ul id="trackList" class="track-list"></ul>
+                            <div class="track-list-actions">
+                                <button id="showMoreTracks" class="secondary-button" type="button" hidden>Show more</button>
+                            </div>
                         </div>
                     </div>
 

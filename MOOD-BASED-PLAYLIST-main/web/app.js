@@ -4,6 +4,7 @@ const generateButton = document.getElementById('generateBtn');
 const currentMoodDisplay = document.getElementById('currentMood');
 const moodBadge = document.getElementById('moodBadge');
 const trackList = document.getElementById('trackList');
+const showMoreTracksButton = document.getElementById('showMoreTracks');
 const energyFill = document.getElementById('energyFill');
 const positivityFill = document.getElementById('positivityFill');
 const energyThumb = document.getElementById('energyThumb');
@@ -19,11 +20,14 @@ const viewSections = document.querySelectorAll('[data-view]');
 const moodLabInfo = document.getElementById('moodLabInfo');
 const playlistTabInfo = document.getElementById('playlistTabInfo');
 const historyLastSong = document.getElementById('historyLastSong');
+const topArtistsList = document.getElementById('topArtistsList');
 
 let selectedMood = 'Focused';
 let selectedEnergy = energyRange ? Number(energyRange.value) : 58;
 let selectedValence = valenceRange ? Number(valenceRange.value) : 63;
 let lastDirectedSong = null;
+let currentTracks = [];
+let showAllTracks = false;
 
 function applyMoodClass(mood) {
     const moodMap = {
@@ -121,6 +125,7 @@ generateButton.addEventListener('click', () => {
             }
 
             renderTrackList(tracks);
+            updateTopArtists(tracks);
             updateSummary(tracks);
             updatePlaylistHeader(tracks);
             updateTabInfo(tracks);
@@ -143,9 +148,12 @@ function switchView(view) {
 }
 
 function renderTrackList(tracks) {
+    currentTracks = tracks;
     trackList.innerHTML = '';
 
-    tracks.forEach((track, index) => {
+    const visibleTracks = showAllTracks ? tracks : tracks.slice(0, 5);
+
+    visibleTracks.forEach((track, index) => {
         const li = document.createElement('li');
         li.className = 'track-row';
 
@@ -211,6 +219,52 @@ function renderTrackList(tracks) {
         li.appendChild(star);
 
         trackList.appendChild(li);
+    });
+
+    if (showMoreTracksButton) {
+        const hasHiddenTracks = tracks.length > 5;
+        showMoreTracksButton.hidden = !hasHiddenTracks;
+        showMoreTracksButton.textContent = showAllTracks ? 'Show less' : 'Show more';
+    }
+}
+
+if (showMoreTracksButton) {
+    showMoreTracksButton.addEventListener('click', () => {
+        showAllTracks = !showAllTracks;
+        renderTrackList(currentTracks);
+    });
+}
+
+function updateTopArtists(tracks) {
+    if (!topArtistsList) {
+        return;
+    }
+
+    const artistStats = new Map();
+    tracks.forEach((track, index) => {
+        const artist = track.artist.trim();
+        if (!artist) {
+            return;
+        }
+
+        const existing = artistStats.get(artist);
+        if (existing) {
+            existing.count += 1;
+        } else {
+            artistStats.set(artist, { count: 1, firstIndex: index });
+        }
+    });
+
+    const topArtists = Array.from(artistStats.entries())
+        .sort((left, right) => right[1].count - left[1].count || left[1].firstIndex - right[1].firstIndex)
+        .slice(0, 5)
+        .map(([artist]) => artist);
+
+    topArtistsList.innerHTML = '';
+    topArtists.forEach((artist) => {
+        const item = document.createElement('li');
+        item.textContent = artist;
+        topArtistsList.appendChild(item);
     });
 }
 
