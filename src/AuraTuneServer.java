@@ -5,12 +5,22 @@ import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class AuraTuneServer {
+    private static final SpotifyApiClient SPOTIFY = new SpotifyApiClient(
+            System.getenv("SPOTIFY_CLIENT_ID"),
+            System.getenv("SPOTIFY_CLIENT_SECRET"));
 
     public static void main(String[] args) throws IOException {
         int[] ports = {8080, 8081, 8082};
@@ -33,6 +43,7 @@ public class AuraTuneServer {
 
         server.createContext("/", new StaticFileHandler());
         server.createContext("/api/mood", new MoodHandler());
+        server.createContext("/api/search", new SearchHandler());
         server.setExecutor(null);
         server.start();
         System.out.println("AuraTune server running at http://localhost:" + boundPort);
@@ -101,7 +112,7 @@ public class AuraTuneServer {
                 return;
             }
 
-            Playlist playlist = MoodMapper.mapMoodToPlaylist(mood);
+            Playlist playlist = SPOTIFY.createMoodPlaylist(mood);
             String response = playlist.toApiResponse();
 
             exchange.getResponseHeaders().add("Content-Type", "text/plain; charset=UTF-8");
@@ -109,6 +120,42 @@ public class AuraTuneServer {
             exchange.sendResponseHeaders(200, body.length);
             try (OutputStream os = exchange.getResponseBody()) {
                 os.write(body);
+            }
+        }
+    }
+
+    static class SearchHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
+                sendText(exchange, 405, "Method Not Allowed");
+                return;
+            }
+
+            String query = getQueryParam(exchange.getRequestURI().getQuery(), "q");
+            String type = getQueryParam(exchange.getRequestURI().getQuery(), "type");
+            if (query == null || query.trim().isEmpty()) {
+                sendText(exchange, 400, "Please provide a search query.");
+                return;
+            }
+            if (!SpotifyApiClient.isSearchTypeSupported(type)) {
+                sendText(exchange, 400, "Search type must be track, artist, album, playlist, or episode.");
+                return;
+            }
+
+            try {
+                String response = SPOTIFY.search(query.trim(), type);
+                exchange.getResponseHeaders().add("Content-Type", "application/json; charset=UTF-8");
+                byte[] body = response.getBytes(StandardCharsets.UTF_8);
+                exchange.sendResponseHeaders(200, body.length);
+                try (OutputStream os = exchange.getResponseBody()) {
+                    os.write(body);
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                sendText(exchange, 503, "Spotify search was interrupted.");
+            } catch (SpotifyApiException e) {
+                sendText(exchange, e.statusCode, e.getMessage());
             }
         }
     }
@@ -338,8 +385,26 @@ class MoodMapper {
 }
 
 class SpotifyApiClient {
-    private String clientId;
-    private String clientSecret;
+    private static final String TOKEN_URL = "https://accounts.spotify.com/api/token";
+    private static final String SEARCH_URL = "https://api.spotify.com/v1/search";
+    private static final Pattern TOKEN_PATTERN = Pattern.compile("\\\"access_token\\\"\\s*:\\s*\\\"([^\\\"]+)\\\"");
+    private static final Pattern NAME_PATTERN = Pattern.compile("\\\"name\\\"\\s*:\\s*\\\"([^\\\"]*)\\\"");
+    private static final Pattern ARTISTS_PATTERN = Pattern.compile("\\\"artists\\\"\\s*:\\s*\\[(.*?)\\]", Pattern.DOTALL);
+    private static final Pattern ALBUM_PATTERN = Pattern.compile("\\\"album\\\"\\s*:\\s*\\{(.*?)\\}", Pattern.DOTALL);
+    private static final Pattern DURATION_PATTERN = Pattern.compile("\\\"duration_ms\\\"\\s*:\\s*(\\d+)");
+    private static final Pattern SPOTIFY_URL_PATTERN = Pattern.compile("\\\"external_urls\\\"\\s*:\\s*\\{.*?\\\"spotify\\\"\\s*:\\s*\\\"([^\\\"]+)\\\"", Pattern.DOTALL);
+    private static final Pattern ARTIST_PATTERN = Pattern.compile("\\\"name\\\"\\s*:\\s*\\\"([^\\\"]*)\\\"");
+
+    private final String clientId;
+    private final String clientSecret;
+    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private String accessToken;
+    private long tokenExpiresAt;
+
+    public static boolean isSearchTypeSupported(String type) {
+        return type != null && (type.equals("track") || type.equals("artist") || type.equals("album")
+                || type.equals("playlist") || type.equals("episode"));
+    }
 
     public SpotifyApiClient(String clientId, String clientSecret) {
         this.clientId = clientId;
@@ -355,17 +420,210 @@ class SpotifyApiClient {
     }
 
     public String createSearchUri(String mood) {
-        String seed = "";
+        String seed;
         switch (mood.toLowerCase(Locale.ROOT)) {
-            case "calm": seed = "ambient"; break;
-            case "energetic": seed = "pop"; break;
-            case "focused": seed = "instrumental"; break;
-            case "melancholy": seed = "indie"; break;
-            case "stressed": seed = "chill"; break;
-            case "joyful": seed = "happy"; break;
+            case "calm": seed = "ambient relaxation"; break;
+            case "energetic": seed = "energetic pop"; break;
+            case "focused": seed = "instrumental focus"; break;
+            case "melancholy": seed = "melancholic indie"; break;
+            case "stressed": seed = "chill meditation"; break;
+            case "joyful": seed = "happy upbeat"; break;
             default: seed = "pop"; break;
         }
 
-        return "https://api.spotify.com/v1/recommendations?limit=5&seed_genres=" + seed;
+        return SEARCH_URL + "?q=" + URLEncoder.encode(seed, StandardCharsets.UTF_8) + "&type=track&limit=5";
+    }
+
+    public Playlist createMoodPlaylist(UserMood mood) {
+        Playlist fallback = MoodMapper.mapMoodToPlaylist(mood);
+        if (clientId == null || clientId.isBlank() || clientSecret == null || clientSecret.isBlank()) {
+            return fallback;
+        }
+
+        try {
+            String token = getAccessToken();
+            HttpRequest request = HttpRequest.newBuilder(URI.create(createSearchUri(mood.getName())))
+                    .header("Authorization", "Bearer " + token)
+                    .GET()
+                    .build();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() != 200) {
+                return fallback;
+            }
+            List<Track> tracks = parseTracks(response.body());
+            return tracks.isEmpty() ? fallback : new Playlist(mood, tracks);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return fallback;
+        } catch (IOException | RuntimeException e) {
+            return fallback;
+        }
+    }
+
+    public String search(String query, String type) throws IOException, InterruptedException, SpotifyApiException {
+        if (clientId == null || clientId.isBlank() || clientSecret == null || clientSecret.isBlank()) {
+            throw new SpotifyApiException(503, "Spotify credentials are not configured on the server.");
+        }
+
+        String searchUri = SEARCH_URL + "?q=" + URLEncoder.encode(query, StandardCharsets.UTF_8)
+                + "&type=" + type + "&limit=10";
+        HttpRequest request = HttpRequest.newBuilder(URI.create(searchUri))
+                .header("Authorization", "Bearer " + getAccessToken())
+                .GET()
+                .build();
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200) {
+            throw new SpotifyApiException(response.statusCode(), "Spotify search failed with status " + response.statusCode() + ".");
+        }
+        return normalizeSearchResults(response.body(), type);
+    }
+
+    private String normalizeSearchResults(String json, String type) {
+        StringBuilder result = new StringBuilder("{\"type\":\"").append(type).append("\",\"items\":[");
+        List<String> objects = extractTrackObjects(json);
+        for (int index = 0; index < objects.size() && index < 10; index++) {
+            if (index > 0) {
+                result.append(',');
+            }
+            String object = objects.get(index);
+            String name = extract(NAME_PATTERN, object, "Untitled");
+            String artist = extract(ARTIST_PATTERN, extract(ARTISTS_PATTERN, object, ""), "");
+            String album = extract(NAME_PATTERN, extract(ALBUM_PATTERN, object, ""), "");
+            String show = extract(NAME_PATTERN, extract(SHOW_PATTERN, object, ""), "");
+            String owner = extract(DISPLAY_NAME_PATTERN, extract(OWNER_PATTERN, object, ""), "");
+            String url = extract(SPOTIFY_URL_PATTERN, object, "#");
+            String image = extract(IMAGE_URL_PATTERN, object, "");
+            String releaseDate = extract(RELEASE_DATE_PATTERN, object, "");
+            String duration = formatDuration(Long.parseLong(extract(DURATION_PATTERN, object, "0")));
+            String total = extract(TRACKS_TOTAL_PATTERN, object, "");
+            result.append("{\"name\":\"").append(jsonEscape(name))
+                    .append("\",\"artist\":\"").append(jsonEscape(artist))
+                    .append("\",\"album\":\"").append(jsonEscape(album))
+                    .append("\",\"show\":\"").append(jsonEscape(show))
+                    .append("\",\"owner\":\"").append(jsonEscape(owner))
+                    .append("\",\"url\":\"").append(jsonEscape(url))
+                    .append("\",\"image\":\"").append(jsonEscape(image))
+                    .append("\",\"releaseDate\":\"").append(jsonEscape(releaseDate))
+                    .append("\",\"duration\":\"").append(duration)
+                    .append("\",\"total\":\"").append(jsonEscape(total)).append("\"}");
+        }
+        return result.append("]}").toString();
+    }
+
+    private synchronized String getAccessToken() throws IOException, InterruptedException {
+        if (accessToken != null && System.currentTimeMillis() < tokenExpiresAt) {
+            return accessToken;
+        }
+
+        HttpRequest request = HttpRequest.newBuilder(URI.create(TOKEN_URL))
+                .header("Authorization", buildAuthorizationHeader())
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .POST(HttpRequest.BodyPublishers.ofString(buildTokenRequestBody()))
+                .build();
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200) {
+            throw new IOException("Spotify token request failed with status " + response.statusCode());
+        }
+
+        Matcher matcher = TOKEN_PATTERN.matcher(response.body());
+        if (!matcher.find()) {
+            throw new IOException("Spotify token response did not contain an access token");
+        }
+        accessToken = matcher.group(1);
+        tokenExpiresAt = System.currentTimeMillis() + 3_300_000L;
+        return accessToken;
+    }
+
+    private List<Track> parseTracks(String json) {
+        List<Track> tracks = new ArrayList<>();
+        for (String trackJson : extractTrackObjects(json)) {
+            if (tracks.size() == 5) {
+                break;
+            }
+            String title = extract(NAME_PATTERN, trackJson, "Unknown track");
+            String artistsJson = extract(ARTISTS_PATTERN, trackJson, "");
+            String artist = extract(ARTIST_PATTERN, artistsJson, "Unknown artist");
+            String albumJson = extract(ALBUM_PATTERN, trackJson, "");
+            String album = extract(NAME_PATTERN, albumJson, "Unknown album");
+            long durationMs = Long.parseLong(extract(DURATION_PATTERN, trackJson, "0"));
+            String spotifyUrl = extract(SPOTIFY_URL_PATTERN, trackJson, "#");
+            tracks.add(new Track(
+                    title,
+                    artist,
+                    album,
+                    0,
+                    0,
+                    0,
+                    formatDuration(durationMs),
+                    spotifyUrl));
+        }
+        return tracks;
+    }
+
+    private List<String> extractTrackObjects(String json) {
+        List<String> objects = new ArrayList<>();
+        int itemsStart = json.indexOf("\"items\"");
+        int arrayStart = itemsStart < 0 ? -1 : json.indexOf('[', itemsStart);
+        if (arrayStart < 0) {
+            return objects;
+        }
+
+        int depth = 0;
+        int objectStart = -1;
+        boolean quoted = false;
+        for (int index = arrayStart + 1; index < json.length(); index++) {
+            char character = json.charAt(index);
+            if (character == '"' && (index == 0 || json.charAt(index - 1) != '\\')) {
+                quoted = !quoted;
+            }
+            if (quoted) {
+                continue;
+            }
+            if (character == '{') {
+                if (depth == 0) {
+                    objectStart = index;
+                }
+                depth++;
+            } else if (character == '}') {
+                depth--;
+                if (depth == 0 && objectStart >= 0) {
+                    objects.add(json.substring(objectStart, index + 1));
+                    objectStart = -1;
+                }
+            } else if (character == ']' && depth == 0) {
+                break;
+            }
+        }
+        return objects;
+    }
+
+    private String extract(Pattern pattern, String text, String fallback) {
+        Matcher matcher = pattern.matcher(text);
+        return matcher.find() ? matcher.group(1) : fallback;
+    }
+
+    private String formatDuration(long durationMs) {
+        long totalSeconds = durationMs / 1000;
+        return (totalSeconds / 60) + ":" + String.format(Locale.ROOT, "%02d", totalSeconds % 60);
+    }
+
+    private String jsonEscape(String value) {
+        return value.replace("\\", "\\\\").replace("\"", "\\\"").replace("\r", "\\r").replace("\n", "\\n");
+    }
+
+    private static final Pattern SHOW_PATTERN = Pattern.compile("\\\"show\\\"\\s*:\\s*\\{(.*?)\\}", Pattern.DOTALL);
+    private static final Pattern OWNER_PATTERN = Pattern.compile("\\\"owner\\\"\\s*:\\s*\\{(.*?)\\}", Pattern.DOTALL);
+    private static final Pattern DISPLAY_NAME_PATTERN = Pattern.compile("\\\"display_name\\\"\\s*:\\s*\\\"([^\\\"]*)\\\"");
+    private static final Pattern IMAGE_URL_PATTERN = Pattern.compile("\\\"images\\\"\\s*:\\s*\\[.*?\\\"url\\\"\\s*:\\s*\\\"([^\\\"]+)\\\"", Pattern.DOTALL);
+    private static final Pattern RELEASE_DATE_PATTERN = Pattern.compile("\\\"release_date\\\"\\s*:\\s*\\\"([^\\\"]*)\\\"");
+    private static final Pattern TRACKS_TOTAL_PATTERN = Pattern.compile("\\\"tracks\\\"\\s*:\\s*\\{.*?\\\"total\\\"\\s*:\\s*(\\d+)", Pattern.DOTALL);
+}
+
+class SpotifyApiException extends Exception {
+    final int statusCode;
+
+    SpotifyApiException(int statusCode, String message) {
+        super(message);
+        this.statusCode = statusCode;
     }
 }

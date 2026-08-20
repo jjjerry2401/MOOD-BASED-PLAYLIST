@@ -104,6 +104,28 @@
                 </div>
             </header>
 
+            <section class="spotify-search-panel" aria-labelledby="spotifySearchTitle">
+                <div class="search-heading">
+                    <p class="label-small">SPOTIFY SEARCH</p>
+                    <h2 id="spotifySearchTitle">Find something to play</h2>
+                </div>
+                <form id="spotifySearchForm" class="spotify-search-form">
+                    <label class="sr-only" for="spotifySearchInput">Search Spotify</label>
+                    <input id="spotifySearchInput" type="search" placeholder="Search tracks, artists, albums, playlists, or episodes" autocomplete="off" required />
+                    <label class="sr-only" for="spotifySearchType">Search category</label>
+                    <select id="spotifySearchType">
+                        <option value="track">Tracks</option>
+                        <option value="artist">Artists</option>
+                        <option value="album">Albums</option>
+                        <option value="playlist">Playlists</option>
+                        <option value="episode">Podcast episodes</option>
+                    </select>
+                    <button class="primary-button search-button" type="submit">Search</button>
+                </form>
+                <p id="spotifySearchStatus" class="search-status" aria-live="polite"></p>
+                <div id="spotifySearchResults" class="spotify-search-results" aria-live="polite"></div>
+            </section>
+
             <div class="panel-section" data-view="dashboard">
             <section class="dashboard-grid">
                 <div class="mood-card">

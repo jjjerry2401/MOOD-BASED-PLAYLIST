@@ -19,11 +19,104 @@ const viewSections = document.querySelectorAll('[data-view]');
 const moodLabInfo = document.getElementById('moodLabInfo');
 const playlistTabInfo = document.getElementById('playlistTabInfo');
 const historyLastSong = document.getElementById('historyLastSong');
+const spotifySearchForm = document.getElementById('spotifySearchForm');
+const spotifySearchInput = document.getElementById('spotifySearchInput');
+const spotifySearchType = document.getElementById('spotifySearchType');
+const spotifySearchStatus = document.getElementById('spotifySearchStatus');
+const spotifySearchResults = document.getElementById('spotifySearchResults');
 
 let selectedMood = 'Focused';
 let selectedEnergy = energyRange ? Number(energyRange.value) : 58;
 let selectedValence = valenceRange ? Number(valenceRange.value) : 63;
 let lastDirectedSong = null;
+
+if (spotifySearchForm) {
+    spotifySearchForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        searchSpotify();
+    });
+}
+
+function searchSpotify() {
+    const query = spotifySearchInput.value.trim();
+    if (!query) {
+        return;
+    }
+
+    const apiUrl = new URL('/api/search', window.location.origin);
+    apiUrl.searchParams.set('q', query);
+    apiUrl.searchParams.set('type', spotifySearchType.value);
+    spotifySearchStatus.textContent = 'Searching Spotify...';
+    spotifySearchResults.innerHTML = '';
+
+    fetch(apiUrl.toString())
+        .then((response) => response.text().then((text) => {
+            let body;
+            try {
+                body = JSON.parse(text);
+            } catch (error) {
+                body = { message: text };
+            }
+            return { ok: response.ok, body };
+        }))
+        .then(({ ok, body }) => {
+            if (!ok) {
+                throw new Error(body.error || body.message || 'Spotify search is unavailable.');
+            }
+            renderSpotifyResults(body.items || [], body.type);
+        })
+        .catch((error) => {
+            spotifySearchStatus.textContent = error.message;
+        });
+}
+
+function renderSpotifyResults(items, type) {
+    spotifySearchResults.innerHTML = '';
+    if (items.length === 0) {
+        spotifySearchStatus.textContent = 'No Spotify results found.';
+        return;
+    }
+
+    spotifySearchStatus.textContent = `${items.length} ${type}${items.length === 1 ? '' : 's'} found`;
+    items.forEach((item) => {
+        const result = document.createElement('article');
+        result.className = 'spotify-result';
+
+        if (item.image) {
+            const image = document.createElement('img');
+            image.src = item.image;
+            image.alt = '';
+            image.loading = 'lazy';
+            result.appendChild(image);
+        }
+
+        const details = document.createElement('div');
+        details.className = 'spotify-result-details';
+        const title = document.createElement('h3');
+        title.textContent = item.name;
+        const meta = document.createElement('p');
+        meta.textContent = searchResultMeta(item, type);
+        details.append(title, meta);
+
+        const open = document.createElement('a');
+        open.className = 'search-result-link';
+        open.href = item.url || '#';
+        open.target = '_blank';
+        open.rel = 'noopener noreferrer';
+        open.textContent = 'Open';
+        details.appendChild(open);
+        result.appendChild(details);
+        spotifySearchResults.appendChild(result);
+    });
+}
+
+function searchResultMeta(item, type) {
+    if (type === 'track') return `${item.artist || 'Unknown artist'}${item.album ? ` • ${item.album}` : ''}${item.duration !== '0:00' ? ` • ${item.duration}` : ''}`;
+    if (type === 'album') return `${item.artist || 'Unknown artist'}${item.releaseDate ? ` • ${item.releaseDate}` : ''}`;
+    if (type === 'playlist') return `${item.owner || 'Spotify playlist'}${item.total ? ` • ${item.total} tracks` : ''}`;
+    if (type === 'episode') return `${item.show || 'Podcast'}${item.releaseDate ? ` • ${item.releaseDate}` : ''}${item.duration !== '0:00' ? ` • ${item.duration}` : ''}`;
+    return item.artist || 'Spotify artist';
+}
 
 function applyMoodClass(mood) {
     const moodMap = {
