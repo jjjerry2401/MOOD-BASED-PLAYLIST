@@ -4,14 +4,16 @@ AuraTune is a Java-based mood playlist application. When Spotify credentials are
 
 ## Spotify setup
 
-Set these environment variables before starting the server. Keep the client secret server-side and do not put it in `web/app.js` or `index.html`.
+Create a local `.env` file from `.env.example` and add your Spotify Developer credentials. The server loads this ignored file automatically. Keep the client secret server-side and do not put it in `web/app.js` or `index.html`.
 
 ```powershell
-$env:SPOTIFY_CLIENT_ID = "your-client-id"
-$env:SPOTIFY_CLIENT_SECRET = "your-client-secret"
+Copy-Item .env.example .env
+# Edit .env and replace both placeholder values.
 javac -d out src/AuraTuneServer.java
 java -cp out AuraTuneServer
 ```
+
+Process environment variables named `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` override values in `.env`.
 
 Add `http://localhost:8080` as an allowed redirect URI in the Spotify Developer Dashboard if you later add user login. The current integration uses Spotify's client-credentials flow, so it does not require a redirect or a Spotify user account.
 

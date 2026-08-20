@@ -11,16 +11,56 @@ import java.nio.charset.StandardCharsets;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class AuraTuneServer {
+    private static final Map<String, String> DOT_ENV = loadDotEnv();
     private static final SpotifyApiClient SPOTIFY = new SpotifyApiClient(
-            System.getenv("SPOTIFY_CLIENT_ID"),
-            System.getenv("SPOTIFY_CLIENT_SECRET"));
+            configuredValue("SPOTIFY_CLIENT_ID"),
+            configuredValue("SPOTIFY_CLIENT_SECRET"));
+
+    private static String configuredValue(String name) {
+        String environmentValue = System.getenv(name);
+        return environmentValue != null && !environmentValue.isBlank() ? environmentValue : DOT_ENV.get(name);
+    }
+
+    private static Map<String, String> loadDotEnv() {
+        Map<String, String> values = new HashMap<>();
+        Path envFile = Path.of(".env");
+        if (!Files.exists(envFile)) {
+            return values;
+        }
+
+        try {
+            for (String line : Files.readAllLines(envFile, StandardCharsets.UTF_8)) {
+                String trimmed = line.trim();
+                if (trimmed.isEmpty() || trimmed.startsWith("#")) {
+                    continue;
+                }
+                int separator = trimmed.indexOf('=');
+                if (separator <= 0) {
+                    continue;
+                }
+                String key = trimmed.substring(0, separator).trim();
+                String value = trimmed.substring(separator + 1).trim();
+                if (value.length() >= 2 && value.startsWith("\"") && value.endsWith("\"")) {
+                    value = value.substring(1, value.length() - 1);
+                }
+                values.put(key, value);
+            }
+        } catch (IOException e) {
+            System.out.println("Unable to read .env; using process environment variables.");
+        }
+        return values;
+    }
 
     public static void main(String[] args) throws IOException {
         int[] ports = {8080, 8081, 8082};
@@ -486,12 +526,12 @@ class SpotifyApiClient {
                 result.append(',');
             }
             String object = objects.get(index);
-            String name = extract(NAME_PATTERN, object, "Untitled");
+            String name = extractTopLevelString(object, "name", "Untitled");
             String artist = extract(ARTIST_PATTERN, extract(ARTISTS_PATTERN, object, ""), "");
-            String album = extract(NAME_PATTERN, extract(ALBUM_PATTERN, object, ""), "");
-            String show = extract(NAME_PATTERN, extract(SHOW_PATTERN, object, ""), "");
+            String album = extractTopLevelString(extract(ALBUM_PATTERN, object, ""), "name", "");
+            String show = extractTopLevelString(extract(SHOW_PATTERN, object, ""), "name", "");
             String owner = extract(DISPLAY_NAME_PATTERN, extract(OWNER_PATTERN, object, ""), "");
-            String url = extract(SPOTIFY_URL_PATTERN, object, "#");
+            String url = extractLast(SPOTIFY_URL_PATTERN, object, "#");
             String image = extract(IMAGE_URL_PATTERN, object, "");
             String releaseDate = extract(RELEASE_DATE_PATTERN, object, "");
             String duration = formatDuration(Long.parseLong(extract(DURATION_PATTERN, object, "0")));
@@ -600,6 +640,44 @@ class SpotifyApiClient {
     private String extract(Pattern pattern, String text, String fallback) {
         Matcher matcher = pattern.matcher(text);
         return matcher.find() ? matcher.group(1) : fallback;
+    }
+
+    private String extractLast(Pattern pattern, String text, String fallback) {
+        Matcher matcher = pattern.matcher(text);
+        String value = fallback;
+        while (matcher.find()) {
+            value = matcher.group(1);
+        }
+        return value;
+    }
+
+    private String extractTopLevelString(String json, String key, String fallback) {
+        String keyToken = "\"" + key + "\"";
+        int depth = 0;
+        boolean quoted = false;
+        for (int index = 0; index < json.length(); index++) {
+            char character = json.charAt(index);
+            if (!quoted && depth == 1 && json.startsWith(keyToken, index)) {
+                int colon = json.indexOf(':', index + keyToken.length());
+                int quoteStart = colon < 0 ? -1 : json.indexOf('"', colon + 1);
+                int quoteEnd = quoteStart < 0 ? -1 : json.indexOf('"', quoteStart + 1);
+                if (quoteEnd > quoteStart) {
+                    return json.substring(quoteStart + 1, quoteEnd);
+                }
+            }
+            if (character == '"' && (index == 0 || json.charAt(index - 1) != '\\')) {
+                quoted = !quoted;
+            }
+            if (quoted) {
+                continue;
+            }
+            if (character == '{' || character == '[') {
+                depth++;
+            } else if (character == '}' || character == ']') {
+                depth--;
+            }
+        }
+        return fallback;
     }
 
     private String formatDuration(long durationMs) {
