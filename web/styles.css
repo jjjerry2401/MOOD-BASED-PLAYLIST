@@ -378,6 +378,137 @@ a {
     font-weight: 800;
 }
 
+.add-to-playlist-button,
+.secondary-button,
+.remove-playlist-track {
+    padding: 8px 11px;
+    border: 1px solid rgba(97, 231, 177, 0.28);
+    border-radius: 10px;
+    color: #d9fff0;
+    background: rgba(30, 111, 88, 0.38);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.add-to-playlist-button:hover,
+.secondary-button:hover,
+.remove-playlist-track:hover {
+    background: rgba(52, 168, 128, 0.55);
+}
+
+.track-actions {
+    margin-top: 9px;
+}
+
+.saved-playlists-panel {
+    width: 100%;
+}
+
+.saved-playlists {
+    display: grid;
+    gap: 14px;
+}
+
+.saved-playlist-card {
+    padding: 18px;
+    border: 1px solid rgba(82, 227, 174, 0.18);
+    border-radius: 18px;
+    background: rgba(1, 20, 18, 0.38);
+}
+
+.saved-playlist-heading,
+.saved-playlist-track {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.saved-playlist-heading h3 {
+    margin: 0;
+}
+
+.saved-playlist-heading span,
+.empty-playlists-message {
+    color: #a8cfc1;
+}
+
+.saved-playlist-tracks {
+    margin-top: 12px;
+}
+
+.saved-playlist-track a {
+    min-width: 0;
+    overflow: hidden;
+    color: #c3efe1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fav-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.fav-row span {
+    flex: 1;
+}
+
+.playlist-dialog {
+    width: min(440px, calc(100% - 32px));
+    padding: 26px;
+    border: 1px solid rgba(82, 227, 174, 0.32);
+    border-radius: 22px;
+    color: #effff8;
+    background: #092923;
+}
+
+.playlist-dialog::backdrop {
+    background: rgba(0, 10, 9, 0.76);
+    backdrop-filter: blur(4px);
+}
+
+.playlist-dialog form {
+    display: grid;
+    gap: 12px;
+}
+
+.playlist-dialog h2 {
+    margin: 0 0 8px;
+}
+
+.playlist-dialog label {
+    color: #b1e9d7;
+    font-size: 13px;
+}
+
+.playlist-dialog select,
+.playlist-dialog input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid rgba(216, 255, 240, 0.2);
+    border-radius: 12px;
+    color: #effff8;
+    background: #031d19;
+    font: inherit;
+}
+
+.playlist-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.playlist-dialog .primary-button {
+    width: auto;
+    margin: 0;
+    padding: 10px 16px;
+}
+
 .sr-only {
     position: absolute;
     width: 1px;
@@ -533,11 +664,30 @@ a {
 }
 
 .cover-art {
+    position: relative;
+    overflow: hidden;
     min-height: 180px;
     border-radius: 28px;
     background: linear-gradient(180deg, #0b2f29, #071912);
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: inset 0 0 45px rgba(0, 0, 0, 0.35);
+}
+
+.cover-art::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(2, 20, 17, 0.02), rgba(2, 20, 17, 0.48));
+    pointer-events: none;
+}
+
+.cover-art img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 180px;
+    object-fit: cover;
+    object-position: center;
 }
 
 .listen-copy .label-small {

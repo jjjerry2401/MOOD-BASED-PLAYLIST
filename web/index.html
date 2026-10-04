@@ -124,6 +124,7 @@
                 </form>
                 <p id="spotifySearchStatus" class="search-status" aria-live="polite"></p>
                 <div id="spotifySearchResults" class="spotify-search-results" aria-live="polite"></div>
+                <p id="playlistActionStatus" class="search-status" aria-live="polite"></p>
             </section>
 
             <div class="panel-section" data-view="dashboard">
@@ -164,7 +165,9 @@
                     </div>
 
                     <div class="current-listen-card">
-                        <div class="cover-art"></div>
+                        <div class="cover-art">
+                            <img id="moodImage" src="https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1200&q=80" alt="Focused mood atmosphere" />
+                        </div>
                         <div class="listen-copy">
                             <p class="label-small" id="currentDescription">Curated for peace, relaxation and mindfulness.</p>
                             <div class="listen-meta">
@@ -186,10 +189,10 @@
                         </div>
                     </div>
 
-                    <div class="mini-player">
+                    <div id="miniPlayer" class="mini-player hidden" aria-live="polite">
                         <div class="player-info">
                             <span class="player-status">Now Playing</span>
-                            <strong id="playerTrack">Deep Production Line</strong>
+                            <strong id="playerTrack"></strong>
                         </div>
                         <div class="player-controls">
                             <button class="icon-button">⏮</button>
@@ -264,21 +267,16 @@
             </div>
 
             <div class="panel-section hidden" data-view="playlist">
-                <section class="dashboard-grid">
-                    <div class="mood-card">
-                        <div class="section-title small">
-                            <span class="icon-badge">♪</span>
-                            <div>
-                                <p class="label-small">Playlist</p>
-                                <h3>View your latest playlist</h3>
-                            </div>
-                        </div>
-                        <p class="panel-copy">Click Generate Playlist to populate your current playlist. Track titles become clickable Spotify links.</p>
-                        <div id="playlistTabInfo" class="panel-detail">
-                            <p><strong>Latest playlist:</strong> No playlist generated yet.</p>
-                            <p><strong>Tip:</strong> Select a mood and use the sliders to tailor the vibe.</p>
+                <section class="mood-card saved-playlists-panel">
+                    <div class="section-title small">
+                        <span class="icon-badge">♪</span>
+                        <div>
+                            <p class="label-small">Your music</p>
+                            <h3>Your playlists</h3>
                         </div>
                     </div>
+                    <p class="panel-copy">Songs you add are saved in playlists on this device.</p>
+                    <div id="savedPlaylists" class="saved-playlists" aria-live="polite"></div>
                 </section>
             </div>
 
@@ -321,6 +319,23 @@
             </div>
         </main>
     </div>
+
+    <dialog id="playlistDialog" class="playlist-dialog" aria-labelledby="playlistDialogTitle">
+        <form id="playlistAddForm">
+            <h2 id="playlistDialogTitle">Add song to playlist</h2>
+            <label for="playlistSelect">Choose a playlist</label>
+            <select id="playlistSelect" required></select>
+            <div id="newPlaylistFields">
+                <label for="newPlaylistName">New playlist name</label>
+                <input id="newPlaylistName" type="text" maxlength="60" autocomplete="off" placeholder="e.g. Evening favourites" required />
+            </div>
+            <p id="playlistDialogStatus" class="search-status" aria-live="polite"></p>
+            <div class="playlist-dialog-actions">
+                <button id="cancelPlaylistAdd" class="secondary-button" type="button">Cancel</button>
+                <button class="primary-button" type="submit">Add song</button>
+            </div>
+        </form>
+    </dialog>
 
     <script src="app.js"></script>
 </body>

@@ -24,11 +24,39 @@ const spotifySearchInput = document.getElementById('spotifySearchInput');
 const spotifySearchType = document.getElementById('spotifySearchType');
 const spotifySearchStatus = document.getElementById('spotifySearchStatus');
 const spotifySearchResults = document.getElementById('spotifySearchResults');
+const playlistActionStatus = document.getElementById('playlistActionStatus');
+const playlistDialog = document.getElementById('playlistDialog');
+const playlistAddForm = document.getElementById('playlistAddForm');
+const playlistSelect = document.getElementById('playlistSelect');
+const newPlaylistFields = document.getElementById('newPlaylistFields');
+const newPlaylistName = document.getElementById('newPlaylistName');
+const playlistDialogStatus = document.getElementById('playlistDialogStatus');
+const cancelPlaylistAdd = document.getElementById('cancelPlaylistAdd');
+const moodImage = document.getElementById('moodImage');
+const miniPlayer = document.getElementById('miniPlayer');
+const playerTrack = document.getElementById('playerTrack');
 
 let selectedMood = 'Focused';
 let selectedEnergy = energyRange ? Number(energyRange.value) : 58;
 let selectedValence = valenceRange ? Number(valenceRange.value) : 63;
 let lastDirectedSong = null;
+let trackToAdd = null;
+const NEW_PLAYLIST_VALUE = '__new_playlist__';
+
+if (playlistSelect) {
+    playlistSelect.addEventListener('change', updateNewPlaylistFields);
+}
+
+if (cancelPlaylistAdd) {
+    cancelPlaylistAdd.addEventListener('click', () => playlistDialog.close());
+}
+
+if (playlistAddForm) {
+    playlistAddForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        saveTrackToPlaylist();
+    });
+}
 
 if (spotifySearchForm) {
     spotifySearchForm.addEventListener('submit', (event) => {
@@ -105,6 +133,15 @@ function renderSpotifyResults(items, type) {
         open.rel = 'noopener noreferrer';
         open.textContent = 'Open';
         details.appendChild(open);
+        if (type === 'track') {
+            details.appendChild(createAddToPlaylistButton({
+                title: item.name,
+                artist: item.artist || 'Unknown artist',
+                album: item.album || '',
+                duration: item.duration || '',
+                spotify: item.url || '#'
+            }));
+        }
         result.appendChild(details);
         spotifySearchResults.appendChild(result);
     });
@@ -116,6 +153,203 @@ function searchResultMeta(item, type) {
     if (type === 'playlist') return `${item.owner || 'Spotify playlist'}${item.total ? ` • ${item.total} tracks` : ''}`;
     if (type === 'episode') return `${item.show || 'Podcast'}${item.releaseDate ? ` • ${item.releaseDate}` : ''}${item.duration !== '0:00' ? ` • ${item.duration}` : ''}`;
     return item.artist || 'Spotify artist';
+}
+
+function createAddToPlaylistButton(track) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'add-to-playlist-button';
+    button.textContent = 'Add to playlist';
+    button.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        openPlaylistDialog(track);
+    });
+    return button;
+}
+
+function openPlaylistDialog(track) {
+    if (!playlistDialog || !playlistSelect || !playlistAddForm) {
+        return;
+    }
+
+    trackToAdd = { ...track };
+    playlistSelect.innerHTML = '';
+    playlistSelect.add(new Option('Create a new playlist…', NEW_PLAYLIST_VALUE));
+    loadPlaylists().forEach((playlist) => {
+        playlistSelect.add(new Option(playlist.name, playlist.name));
+    });
+    playlistAddForm.reset();
+    playlistSelect.value = NEW_PLAYLIST_VALUE;
+    newPlaylistName.value = '';
+    playlistDialogStatus.textContent = '';
+    updateNewPlaylistFields();
+    playlistDialog.showModal();
+    if (playlistSelect.value === NEW_PLAYLIST_VALUE) {
+        newPlaylistName.focus();
+    }
+}
+
+function updateNewPlaylistFields() {
+    if (!playlistSelect || !newPlaylistFields || !newPlaylistName) {
+        return;
+    }
+
+    const creatingPlaylist = playlistSelect.value === NEW_PLAYLIST_VALUE;
+    newPlaylistFields.hidden = !creatingPlaylist;
+    newPlaylistName.required = creatingPlaylist;
+}
+
+function saveTrackToPlaylist() {
+    if (!trackToAdd || !playlistSelect) {
+        return;
+    }
+
+    const playlists = loadPlaylists();
+    let playlist;
+    if (playlistSelect.value === NEW_PLAYLIST_VALUE) {
+        const name = newPlaylistName.value.trim();
+        if (!name) {
+            playlistDialogStatus.textContent = 'Enter a name for the new playlist.';
+            newPlaylistName.focus();
+            return;
+        }
+        if (playlists.some((item) => item.name.toLocaleLowerCase() === name.toLocaleLowerCase())) {
+            playlistDialogStatus.textContent = 'That playlist name already exists. Select it from the list instead.';
+            return;
+        }
+        playlist = { name, tracks: [] };
+        playlists.push(playlist);
+    } else {
+        playlist = playlists.find((item) => item.name === playlistSelect.value);
+        if (!playlist) {
+            playlistDialogStatus.textContent = 'Choose an existing playlist or create a new one.';
+            return;
+        }
+    }
+
+    const duplicate = playlist.tracks.some((item) =>
+        item.title.toLocaleLowerCase() === trackToAdd.title.toLocaleLowerCase()
+        && item.artist.toLocaleLowerCase() === trackToAdd.artist.toLocaleLowerCase());
+    if (duplicate) {
+        playlistDialogStatus.textContent = `“${trackToAdd.title}” is already in “${playlist.name}”.`;
+        return;
+    }
+
+    playlist.tracks.push(trackToAdd);
+    if (!savePlaylists(playlists)) {
+        playlistActionStatus.textContent = 'Could not save this playlist in your browser storage.';
+        return;
+    }
+
+    renderPlaylists();
+    playlistActionStatus.textContent = `Added “${trackToAdd.title}” to “${playlist.name}”.`;
+    playlistDialog.close();
+    trackToAdd = null;
+}
+
+function loadPlaylists() {
+    try {
+        const raw = localStorage.getItem('aura_playlists');
+        const parsed = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(parsed)) {
+            console.warn('Saved playlists are not in the expected format.');
+            return [];
+        }
+        return parsed
+            .filter((playlist) =>
+                playlist && typeof playlist.name === 'string' && Array.isArray(playlist.tracks))
+            .map((playlist) => ({
+                name: playlist.name,
+                tracks: playlist.tracks.filter((track) =>
+                    track && typeof track.title === 'string' && typeof track.artist === 'string')
+            }));
+    } catch (error) {
+        console.warn('Could not load saved playlists.', error);
+        return [];
+    }
+}
+
+function savePlaylists(playlists) {
+    try {
+        localStorage.setItem('aura_playlists', JSON.stringify(playlists));
+        return true;
+    } catch (error) {
+        console.error('Could not save playlists.', error);
+        return false;
+    }
+}
+
+function renderPlaylists() {
+    const savedPlaylists = document.getElementById('savedPlaylists');
+    const countLabel = document.getElementById('sidebar-playlist-count');
+    const playlists = loadPlaylists();
+
+    if (countLabel) {
+        countLabel.textContent = `${playlists.length} saved`;
+    }
+    if (!savedPlaylists) {
+        return;
+    }
+
+    savedPlaylists.innerHTML = '';
+    if (playlists.length === 0) {
+        const emptyMessage = document.createElement('p');
+        emptyMessage.className = 'empty-playlists-message';
+        emptyMessage.textContent = 'No playlists yet. Add a song and create your first playlist.';
+        savedPlaylists.appendChild(emptyMessage);
+        return;
+    }
+
+    playlists.forEach((playlist, playlistIndex) => {
+        const card = document.createElement('section');
+        card.className = 'saved-playlist-card';
+        const heading = document.createElement('div');
+        heading.className = 'saved-playlist-heading';
+        const title = document.createElement('h3');
+        title.textContent = playlist.name;
+        const count = document.createElement('span');
+        count.textContent = `${playlist.tracks.length} ${playlist.tracks.length === 1 ? 'song' : 'songs'}`;
+        heading.append(title, count);
+        card.appendChild(heading);
+
+        const tracks = document.createElement('ul');
+        tracks.className = 'panel-list saved-playlist-tracks';
+        if (playlist.tracks.length === 0) {
+            const emptyTrack = document.createElement('li');
+            emptyTrack.textContent = 'No songs in this playlist yet.';
+            tracks.appendChild(emptyTrack);
+        }
+        playlist.tracks.forEach((track, trackIndex) => {
+            const item = document.createElement('li');
+            item.className = 'saved-playlist-track';
+            const link = document.createElement('a');
+            link.textContent = `${track.title} • ${track.artist}`;
+            link.href = track.spotify || track.href || '#';
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.className = 'remove-playlist-track';
+            remove.textContent = 'Remove';
+            remove.addEventListener('click', () => {
+                const currentPlaylists = loadPlaylists();
+                if (!currentPlaylists[playlistIndex]) {
+                    return;
+                }
+                currentPlaylists[playlistIndex].tracks.splice(trackIndex, 1);
+                if (savePlaylists(currentPlaylists)) {
+                    renderPlaylists();
+                } else {
+                    playlistActionStatus.textContent = 'Could not update this playlist in your browser storage.';
+                }
+            });
+            item.append(link, createAddToPlaylistButton(track), remove);
+            tracks.appendChild(item);
+        });
+        card.appendChild(tracks);
+        savedPlaylists.appendChild(card);
+    });
 }
 
 function applyMoodClass(mood) {
@@ -130,6 +364,20 @@ function applyMoodClass(mood) {
 
     const className = moodMap[mood] || 'mood-focused';
     moodBadge.className = 'mood-badge ' + className;
+
+    const moodImages = {
+        Calm: 'https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=1200&q=80',
+        Energetic: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1200&q=80',
+        Focused: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1200&q=80',
+        Melancholy: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=1200&q=80',
+        Stressed: 'https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=1200&q=80',
+        Joyful: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1200&q=80'
+    };
+
+    if (moodImage && moodImages[mood]) {
+        moodImage.src = moodImages[mood];
+        moodImage.alt = `${mood} mood atmosphere`;
+    }
 
     if (mood === 'Energetic') {
         moodBadge.textContent = 'ENERGY';
@@ -256,6 +504,7 @@ function renderTrackList(tracks) {
 
             // register click to add to recently viewed history (also opens externally)
             title.addEventListener('click', (e) => {
+                showPlayer(track);
                 try {
                     addHistory({ title: track.title, artist: track.artist, href: title.href });
                 } catch (err) {
@@ -277,6 +526,11 @@ function renderTrackList(tracks) {
         const duration = document.createElement('div');
         duration.className = 'track-duration';
         duration.textContent = track.duration || '3:42';
+
+        const actions = document.createElement('div');
+        actions.className = 'track-actions';
+        actions.appendChild(createAddToPlaylistButton(track));
+        info.appendChild(actions);
 
         li.appendChild(indexDiv);
         li.appendChild(info);
@@ -307,11 +561,30 @@ function renderTrackList(tracks) {
     });
 }
 
+function showPlayer(track) {
+    if (!miniPlayer || !playerTrack) {
+        return;
+    }
+
+    playerTrack.textContent = `${track.title} • ${track.artist}`;
+    miniPlayer.classList.remove('hidden');
+}
+
+function hidePlayer() {
+    if (!miniPlayer || !playerTrack) {
+        return;
+    }
+
+    playerTrack.textContent = '';
+    miniPlayer.classList.add('hidden');
+}
+
 function updatePlaylistHeader(tracks) {
     const trackCount = document.getElementById('trackCount');
     const playlistDuration = document.getElementById('playlistDuration');
-    const playerTrack = document.getElementById('playerTrack');
     const currentDescription = document.getElementById('currentDescription');
+
+    hidePlayer();
 
     if (trackCount) {
         trackCount.textContent = `${tracks.length} tracks`;
@@ -325,10 +598,6 @@ function updatePlaylistHeader(tracks) {
         const minutes = Math.floor(totalSeconds / 60);
         const seconds = totalSeconds % 60;
         playlistDuration.textContent = `${minutes}:${seconds.toString().padStart(2, '0')} min`;
-    }
-
-    if (playerTrack && tracks[0]) {
-        playerTrack.textContent = `${tracks[0].title} • ${tracks[0].artist}`;
     }
 
     if (currentDescription) {
@@ -523,6 +792,7 @@ sidebarButtons.forEach((btn) => {
 // initial render
 renderHistorySidebar();
 renderFavoritesList();
+renderPlaylists();
 
 // ---------- Favorites management ----------
 function loadFavorites() {
@@ -580,7 +850,16 @@ function renderFavoritesList() {
         favs.forEach((f) => {
             const li = document.createElement('li');
             li.className = 'fav-row';
-            li.textContent = `${f.title} • ${f.artist}`;
+            const title = document.createElement('span');
+            title.textContent = `${f.title} • ${f.artist}`;
+            li.appendChild(title);
+            li.appendChild(createAddToPlaylistButton({
+                title: f.title,
+                artist: f.artist,
+                album: f.album || '',
+                duration: f.duration || '',
+                spotify: f.spotify || f.href || '#'
+            }));
             const remove = document.createElement('button');
             remove.textContent = 'Remove';
             remove.style.marginLeft = '8px';
