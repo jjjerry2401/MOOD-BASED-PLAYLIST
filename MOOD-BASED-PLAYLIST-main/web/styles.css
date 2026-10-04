@@ -369,6 +369,18 @@ a {
     color: #d7f9ee;
 }
 
+.top-artists-list {
+    margin: 10px 0 0;
+    padding-left: 22px;
+    color: #dffcf6;
+}
+
+.top-artists-list li {
+    padding: 3px 0;
+    color: #ccefe3;
+    font-size: 13px;
+}
+
 .right-panel {
     display: grid;
     gap: 24px;
@@ -447,6 +459,26 @@ a {
     list-style: none;
     padding: 0;
     margin: 0;
+}
+
+.track-list-actions {
+    display: flex;
+    justify-content: center;
+    padding: 14px 18px 6px;
+}
+
+.secondary-button {
+    padding: 10px 18px;
+    border: 1px solid rgba(101, 215, 182, 0.35);
+    border-radius: 12px;
+    background: rgba(46, 211, 145, 0.10);
+    color: #dffcf6;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.secondary-button:hover {
+    background: rgba(46, 211, 145, 0.20);
 }
 
 .track-table .track-row {

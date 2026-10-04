@@ -138,12 +138,22 @@ public class AuraTuneServer {
 
 class FileLoader {
     public static byte[] read(String fileName) throws IOException {
-        String relative = "web" + java.io.File.separator + fileName;
-        java.io.File file = new java.io.File(relative);
-        if (!file.exists()) {
+        java.nio.file.Path classpathRoot;
+        try {
+            classpathRoot = java.nio.file.Paths.get(
+                    AuraTuneServer.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+        } catch (java.net.URISyntaxException e) {
+            throw new IOException("Unable to locate the application files", e);
+        }
+
+        java.nio.file.Path projectRoot = classpathRoot.getFileName().toString().equals("build")
+                ? classpathRoot.getParent()
+                : java.nio.file.Paths.get("").toAbsolutePath();
+        java.nio.file.Path file = projectRoot.resolve("web").resolve(fileName);
+        if (!java.nio.file.Files.exists(file)) {
             throw new IOException("Missing static file: " + fileName);
         }
-        return java.nio.file.Files.readAllBytes(file.toPath());
+        return java.nio.file.Files.readAllBytes(file);
     }
 }
 
@@ -333,11 +343,26 @@ class MoodMapper {
                 tracks.add(new Track("Badass", "Anirudh Ravichander", "Leo", 99, 98, 91, "3:49", "https://open.spotify.com/search/Badass%20Anirudh%20Ravichander"));
                 break;
             case "Focused":
-                tracks.add(new Track("Deep Production Line", "Logic Motion", "Clean Room", 108, 62, 54, "4:10", "https://open.spotify.com/track/deep-production-line"));
-                tracks.add(new Track("Low Key Systems", "Orbit Studies", "Library Hours", 96, 50, 63, "4:00", "https://open.spotify.com/track/low-key-systems"));
-                tracks.add(new Track("Control Flow", "The Quiet Index", "Work Drift", 104, 58, 57, "4:08", "https://open.spotify.com/track/control-flow"));
-                tracks.add(new Track("Steady Pulse", "Focus Protocol", "Minimal Modes", 98, 52, 60, "3:52", "https://open.spotify.com/track/steady-pulse"));
-                tracks.add(new Track("Coded Silence", "The Study Set", "Precision", 90, 48, 55, "3:46", "https://open.spotify.com/track/coded-silence"));
+                tracks.add(new Track("Aalaporan Thamizhan", "A.R. Rahman", "Mersal", 97, 95, 94, "5:48", "https://open.spotify.com/search/Aalaporan%20Thamizhan%20AR%20Rahman"));
+                tracks.add(new Track("Surviva", "Anirudh Ravichander", "Vivegam", 96, 97, 88, "3:42", "https://open.spotify.com/search/Surviva%20Anirudh%20Ravichander"));
+                tracks.add(new Track("Verithanam", "A.R. Rahman", "Bigil", 98, 96, 95, "4:06", "https://open.spotify.com/search/Verithanam%20AR%20Rahman"));
+                tracks.add(new Track("Mersal Arasan", "A.R. Rahman", "Mersal", 97, 94, 93, "4:16", "https://open.spotify.com/search/Mersal%20Arasan%20AR%20Rahman"));
+                tracks.add(new Track("Petta Theme", "Anirudh Ravichander", "Petta", 99, 98, 91, "1:33", "https://open.spotify.com/search/Petta%20Theme%20Anirudh%20Ravichander"));
+                tracks.add(new Track("Vikram Title Track", "Anirudh Ravichander", "Vikram", 98, 99, 89, "3:38", "https://open.spotify.com/search/Vikram%20Title%20Track%20Anirudh%20Ravichander"));
+                tracks.add(new Track("Rolex Theme", "Anirudh Ravichander", "Vikram", 100, 99, 90, "2:27", "https://open.spotify.com/search/Rolex%20Theme%20Anirudh%20Ravichander"));
+                tracks.add(new Track("Leo Das Entry", "Anirudh Ravichander", "Leo", 98, 97, 87, "2:18", "https://open.spotify.com/search/Leo%20Das%20Entry%20Anirudh%20Ravichander"));
+                tracks.add(new Track("Neruppu Kumar", "Anirudh Ravichander", "Petta", 97, 96, 92, "2:45", "https://open.spotify.com/search/Neruppu%20Kumar%20Anirudh%20Ravichander"));
+                tracks.add(new Track("Surviva", "Anirudh Ravichander", "Vivegam", 96, 97, 88, "3:42", "https://open.spotify.com/search/Surviva%20Anirudh%20Ravichander"));
+                tracks.add(new Track("Aathi", "Anirudh Ravichander", "Kaththi", 94, 93, 91, "4:24", "https://open.spotify.com/search/Aathi%20Anirudh%20Ravichander"));
+                tracks.add(new Track("Bad Eyes", "Anirudh Ravichander", "Vikram", 95, 96, 86, "2:14", "https://open.spotify.com/search/Bad%20Eyes%20Anirudh%20Ravichander"));
+                tracks.add(new Track("Bloody Sweet", "Anirudh Ravichander", "Leo", 99, 98, 89, "3:35", "https://open.spotify.com/search/Bloody%20Sweet%20Anirudh%20Ravichander"));
+                tracks.add(new Track("Naa Ready", "Anirudh Ravichander", "Leo", 98, 97, 95, "4:08", "https://open.spotify.com/search/Naa%20Ready%20Anirudh%20Ravichander"));
+                tracks.add(new Track("Once Upon a Time", "Anirudh Ravichander", "Vikram", 96, 95, 84, "2:23", "https://open.spotify.com/search/Once%20Upon%20a%20Time%20Anirudh%20Ravichander"));
+                tracks.add(new Track("Badass", "Anirudh Ravichander", "Leo", 99, 98, 91, "3:49", "https://open.spotify.com/search/Badass%20Anirudh%20Ravichander"));
+                tracks.add(new Track("Hukum", "Anirudh Ravichander", "Jailer", 98, 97, 93, "3:27", "https://open.spotify.com/search/Hukum%20Anirudh%20Ravichander"));
+                tracks.add(new Track("Kaavaalaa", "Anirudh Ravichander", "Jailer", 96, 94, 97, "3:10", "https://open.spotify.com/search/Kaavaalaa%20Anirudh%20Ravichander"));
+                tracks.add(new Track("Dippam Dappam", "Anirudh Ravichander", "Kaathuvaakula Rendu Kaadhal", 94, 92, 96, "3:29", "https://open.spotify.com/search/Dippam%20Dappam%20Anirudh%20Ravichander"));
+                tracks.add(new Track("Jalabulajangu", "Anirudh Ravichander", "Don", 95, 94, 93, "4:16", "https://open.spotify.com/search/Jalabulajangu%20Anirudh%20Ravichander"));
                 break;
             case "Melancholy":
                 tracks.add(new Track("Po Nee Po", "Anirudh Ravichander", "3", 55, 28, 31, "4:15", "https://open.spotify.com/search/Po%20Nee%20Po%20Anirudh%20Ravichander"));
@@ -363,18 +388,48 @@ class MoodMapper {
                 tracks.add(new Track("Aararo", "D. Imman", "Siruthai", 44, 17, 22, "5:05", "https://open.spotify.com/search/Aararo%20D%20Imman"));
                 break;
             case "Stressed":
-                tracks.add(new Track("Release Frequency", "The Green Rooms", "Breathe In", 104, 46, 72, "4:05", "https://open.spotify.com/track/release-frequency"));
-                tracks.add(new Track("Blue Hour Reset", "Mason Daylight", "Circle", 78, 30, 88, "3:52", "https://open.spotify.com/track/blue-hour-reset"));
-                tracks.add(new Track("Room to Breathe", "Astra Lane", "Afterwork", 92, 55, 82, "4:15", "https://open.spotify.com/track/room-to-breathe"));
-                tracks.add(new Track("Gentle Release", "Calm Circuit", "Soft Relief", 86, 40, 84, "4:02", "https://open.spotify.com/track/gentle-release"));
-                tracks.add(new Track("Open Window", "Night Meadow", "Clear Skies", 88, 42, 81, "3:59", "https://open.spotify.com/track/open-window"));
+                tracks.add(new Track("Nallaru Po", "Sai Abhyankkar", "Dude", 52, 25, 23, "3:56","https://open.spotify.com/track/3Nt5m3MOIrNt1sf8v14GPM"));
+                tracks.add(new Track("Local Boys", "Anirudh Ravichander", "Ethir Neechal", 87, 76, 74, "4:34","https://open.spotify.com/search/Local%20Boys%20Anirudh%20Ravichander"));
+                tracks.add(new Track("Kadhal Yen Kadhal", "Dhanush", "Mayakkam Enna", 68, 43, 31, "6:08","https://open.spotify.com/search/Kadhal%20Yen%20Kadhal%20Dhanush"));
+                tracks.add(new Track("Ava Enna", "Karthik", "Vaaranam Aayiram", 55, 27, 24, "5:21","https://open.spotify.com/search/Ava%20Enna%20Karthik"));
+                tracks.add(new Track("Venam Machan", "D. Imman", "Oru Kal Oru Kannadi", 63, 39, 42, "4:17","https://open.spotify.com/search/Venam%20Machan%20D%20Imman"));
+                tracks.add(new Track("Oru Kal Oru Kannadi", "Harris Jayaraj", "Siva Manasula Sakthi", 61, 34, 42, "5:58","https://open.spotify.com/search/Oru%20Kal%20Oru%20Kannadi%20Harris%20Jayaraj"));
+                tracks.add(new Track("Pogadhey", "Yuvan Shankar Raja", "Deepavali", 52, 24, 27, "4:46","https://open.spotify.com/search/Pogadhey%20Yuvan%20Shankar%20Raja"));
+                tracks.add(new Track("Aaruyire", "A.R. Rahman", "Guru", 55, 29, 25, "6:06","https://open.spotify.com/search/Aaruyire%20AR%20Rahman%20Guru"));
+                tracks.add(new Track("Enakenna Yaarum Illaye", "Anirudh Ravichander", "Aakko", 58, 32, 29, "4:06","https://open.spotify.com/search/Enakenna%20Yaarum%20Illaye%20Anirudh"));
+                tracks.add(new Track("Kaaviya Oviya", "A.R. Rahman", "I", 57, 30, 28, "5:21","https://open.spotify.com/search/Kaaviya%20Oviya%20AR%20Rahman"));
+                tracks.add(new Track("Why This Kolaveri Di", "Anirudh Ravichander", "3", 61, 35, 39, "4:03","https://open.spotify.com/search/Why%20This%20Kolaveri%20Di%20Anirudh"));
+                tracks.add(new Track("Vaanganna Vanakkanganna", "Anirudh Ravichander", "Thalaivaa", 86, 73, 78, "5:14","https://open.spotify.com/search/Vaanganna%20Vanakkanganna%20Anirudh"));
+                tracks.add(new Track("Kannukulla", "Leon James", "Nilavukku Enmel Ennadi Kobam", 59, 33, 35, "4:10","https://open.spotify.com/search/Kannukulla%20Leon%20James"));
+                tracks.add(new Track("Ennai Vittu Uyir Ponalum", "A.R. Rahman", "Love Today", 49, 21, 19, "5:06","https://open.spotify.com/search/Ennai%20Vittu%20Uyir%20Ponalum%20Love%20Today"));
+                tracks.add(new Track("Voda Voda", "Dhanush", "Mayakkam Enna", 74, 57, 46, "4:51","https://open.spotify.com/search/Voda%20Voda%20Dhanush"));
+                tracks.add(new Track("Quit Pannuda", "Anirudh Ravichander", "Master", 82, 69, 61, "4:02","https://open.spotify.com/search/Quit%20Pannuda%20Anirudh"));
+                tracks.add(new Track("Open the Tasmac", "Anirudh Ravichander", "Maan Karate", 89, 82, 84, "4:25","https://open.spotify.com/search/Open%20the%20Tasmac%20Anirudh"));
+                tracks.add(new Track("Udhungada Sangu", "Anirudh Ravichander", "Velaiilla Pattadhari", 89, 78, 76, "3:41","https://open.spotify.com/search/Udhungada%20Sangu%20Anirudh"));
+                tracks.add(new Track("Ennodu Nee Irundhaal", "A.R. Rahman", "I", 60, 31, 27, "5:51","https://open.spotify.com/search/Ennodu%20Nee%20Irundhaal%20AR%20Rahman"));
+                tracks.add(new Track("Vaadi Pulla Vaadi", "Hiphop Tamizha", "Meesaya Murukku", 81, 62, 66, "4:07","https://open.spotify.com/search/Vaadi%20Pulla%20Vaadi%20Hiphop%20Tamizha"));
                 break;
             case "Joyful":
-                tracks.add(new Track("Golden Street", "The Weekend Signal", "Open Skies", 118, 88, 97, "3:55", "https://open.spotify.com/track/golden-street"));
-                tracks.add(new Track("Bright Room", "Morning Machine", "Color Release", 116, 84, 95, "4:02", "https://open.spotify.com/track/bright-room"));
-                tracks.add(new Track("Sunday Light", "The Skyline Pop Line", "High Sun", 110, 80, 90, "3:49", "https://open.spotify.com/track/sunday-light"));
-                tracks.add(new Track("Happy Carousel", "Joy Motion", "Summer Nights", 112, 86, 93, "4:14", "https://open.spotify.com/track/happy-carousel"));
-                tracks.add(new Track("Radiant Walk", "Golden Pulse", "Feeling Good", 120, 90, 96, "4:07", "https://open.spotify.com/track/radiant-walk"));
+                tracks.add(new Track("Machii Open the Bottle", "Yuvan Shankar Raja", "Mankatha", 94, 86, 91, "4:45","https://open.spotify.com/search/Machii%20Open%20the%20Bottle%20Yuvan%20Shankar%20Raja"));
+                tracks.add(new Track("Seva Kodi", "A.R. Rahman", "Sivaji", 91, 79, 88, "4:30","https://open.spotify.com/search/Seva%20Kodi%20AR%20Rahman"));
+                tracks.add(new Track("Singari", "Sai Abhyankkar", "Dude", 91, 78, 94, "3:28","https://open.spotify.com/track/0pxE2MKJnBMR9c0giy7v5J"));
+                tracks.add(new Track("Evanda Enakku Custody", "Santhosh Narayanan", "Mahaan", 91, 84, 93, "3:36","https://open.spotify.com/search/Evanda%20Enakku%20Custody%20Mahaan"));
+                tracks.add(new Track("Tasaku Tasaku", "Alex Paul", "EPCO 302", 78, 65, 76, "5:06","https://open.spotify.com/search/Tasaku%20Tasaku%20Alex%20Paul"));
+                tracks.add(new Track("Vaa Vaathi", "G.V. Prakash Kumar", "Vaathi", 82, 61, 91, "3:45","https://open.spotify.com/search/Vaa%20Vaathi%20GV%20Prakash%20Kumar"));
+                tracks.add(new Track("Mallipoo", "A.R. Rahman", "Vendhu Thanindhathu Kaadu", 76, 49, 87, "4:05","https://open.spotify.com/search/Mallipoo%20AR%20Rahman"));
+                tracks.add(new Track("Azhagiye", "A.R. Rahman", "Kaatru Veliyidai", 81, 52, 90, "5:56","https://open.spotify.com/search/Azhagiye%20AR%20Rahman"));
+                tracks.add(new Track("Enamo Yedho", "Harris Jayaraj", "Ko", 84, 64, 89, "5:25","https://open.spotify.com/search/Enamo%20Yedho%20Harris%20Jayaraj"));
+                tracks.add(new Track("Mei Nigara", "A.R. Rahman", "24", 86, 68, 92, "5:16","https://open.spotify.com/search/Mei%20Nigara%20AR%20Rahman"));
+                tracks.add(new Track("Kadhal Ara Onnu Vizundhuchu", "Sean Roldan", "Vaayai Moodi Pesavum", 82, 61, 88, "3:45","https://open.spotify.com/track/7IO5iU84tFIZ4kfvhrg4oZ"));
+                tracks.add(new Track("Nannare", "A.R. Rahman", "Guru", 74, 43, 86, "5:28","https://open.spotify.com/track/0ILPJhvliKjxlyd5CdZ4I3"));
+                tracks.add(new Track("Naaka Mukka", "Vijay Antony", "Kadhalil Vizhunthen", 97, 94, 98, "4:39","https://open.spotify.com/search/Naaka%20Mukka%20Vijay%20Antony"));
+                tracks.add(new Track("Kalasaala", "Vijay Antony", "Osthe", 95, 91, 96, "4:11","https://open.spotify.com/search/Kalasaala%20Vijay%20Antony"));
+                tracks.add(new Track("Mascara", "Vijay Antony", "Salim", 88, 70, 91, "4:54","https://open.spotify.com/search/Mascara%20Vijay%20Antony"));
+                tracks.add(new Track("Rich Rich", "Santhosh Narayanan", "Mahaan", 85, 67, 93, "3:06","https://open.spotify.com/search/Rich%20Rich%20Santhosh%20Narayanan"));
+                tracks.add(new Track("Yenga Area", "Anirudh Ravichander", "Maan Karate", 91, 82, 94, "4:27","https://open.spotify.com/search/Yenga%20Area%20Anirudh%20Ravichander"));
+                tracks.add(new Track("Rakita Rakita", "Dhanush", "Jagame Thandhiram", 96, 95, 94, "4:06","https://open.spotify.com/search/Rakita%20Rakita%20Dhanush"));
+                tracks.add(new Track("Kannima", "Santhosh Narayanan", "Suriya 43", 78, 52, 88, "4:12","https://open.spotify.com/search/Kannima%20Santhosh%20Narayanan"));
+                tracks.add(new Track("Pala Pala", "Hariharan", "Ayan", 89, 73, 94, "4:43","https://open.spotify.com/search/Pala%20Pala%20Hariharan%20Ayan"));
                 break;
             default:
                 tracks.add(new Track("Open Door", "Aura Tone", "Default Session", 100, 60, 75, "3:30", "https://open.spotify.com/track/open-door"));
